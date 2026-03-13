@@ -98,6 +98,90 @@ curl -k -H "Authorization: Bearer $(cat ~/devlab/config/token)" https://127.0.0.
 
 ---
 
+## Practical out-of-the-box examples
+
+These are concrete things you can do immediately after install, without adding any dependencies.
+
+### 1) Fast "is my Mac dev stack alive?" check
+
+Use this before coding sessions, demos, or when waking from sleep:
+
+```bash
+bash ~/devlab/status-devlab.sh
+```
+
+You get launchd/job status, process PIDs, IP addresses, an authenticated API probe, and log-file hints in one command.
+
+### 2) Use DevLab as a local health endpoint for scripts
+
+Return non-zero if DevLab is unhealthy (useful in shell scripts / CI-on-local-machine checks):
+
+```bash
+curl -fsS -k \
+  -H "Authorization: Bearer $(cat ~/devlab/config/token)" \
+  https://127.0.0.1:3000 >/dev/null
+```
+
+If this command exits with code `0`, the service is reachable and authenticated.
+
+### 3) Run a tiny "pre-flight" gate before starting work
+
+```bash
+if curl -fsS -k -H "Authorization: Bearer $(cat ~/devlab/config/token)" https://127.0.0.1:3000 >/dev/null; then
+  echo "DevLab OK — start coding"
+else
+  echo "DevLab not ready — run: bash ~/devlab/status-devlab.sh"
+fi
+```
+
+### 4) Monitor uptime continuously in a separate terminal
+
+```bash
+while true; do
+  date
+  curl -s -o /dev/null -w "HTTP %{http_code}\n" -k \
+    -H "Authorization: Bearer $(cat ~/devlab/config/token)" \
+    https://127.0.0.1:3000
+  sleep 30
+done
+```
+
+Good for long-running local jobs where you want a quick heartbeat.
+
+### 5) Share status API on your LAN for temporary team demos
+
+1. Set `BIND_ADDR=0.0.0.0` in `~/Library/LaunchAgents/com.diogo.devlab.plist`
+2. Optionally set `ADVERTISE_SERVICE=1`
+3. Reload launchd (see [Configuration](#configuration))
+
+Then teammates on the same trusted network can resolve/discover the service and call it with the token.
+
+### 6) Quick recovery when something looks off
+
+```bash
+launchctl kickstart -k gui/$(id -u)/com.diogo.devlab
+bash ~/devlab/status-devlab.sh
+```
+
+If that still fails, use the reset flow in [Troubleshooting](#troubleshooting).
+
+---
+
+## Why this is cool
+
+DevLab gives you production-like service behavior on a personal Mac, without production-level overhead.
+
+- **Feels like real infrastructure:** auto-start at login, `launchd` keep-alive, and predictable process lifecycle
+- **Secure by default:** loopback bind, HTTPS enabled, token auth, timing-safe comparison, and request rate limiting
+- **Operationally usable:** one command health check plus focused logs for startup, runtime, and launchd-level failures
+- **Minimal setup burden:** no root, no Homebrew, no extra runtime dependencies beyond Node.js
+- **Grows with your needs:** stay local-only for safety, or intentionally enable LAN + Bonjour for team demos
+- **Easy to maintain:** idempotent installer, clean uninstall path, and fast restart/reset workflows
+
+In short: it helps you adopt a small "production mindset" locally — automation, security, observability, and repeatability.
+
+---
+
 ## Testing
 
 This repository includes automated tests for the Node server and installer smoke paths.
