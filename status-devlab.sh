@@ -9,7 +9,7 @@ DOMAIN="gui/$UID"
 PORT="${PORT:-3000}"
 SERVICE_NAME="${SERVICE_NAME:-Diogo Dev Lab}"
 ENABLE_TLS="${ENABLE_TLS:-1}"
-ADVERTISE_SERVICE="${ADVERTISE_SERVICE:-0}"
+SHARE_SERVICE="${SHARE_SERVICE:-0}"
 
 say() { printf "%s\n" "$*"; }
 header() { printf "\n=== %s ===\n" "$*"; }
@@ -42,12 +42,12 @@ fi
 MDNS_PIDS_HTTP="$(pgrep -f "dns-sd -R $SERVICE_NAME _http._tcp local" || true)"
 MDNS_PIDS_HTTPS="$(pgrep -f "dns-sd -R $SERVICE_NAME _https._tcp local" || true)"
 MDNS_PIDS="${MDNS_PIDS_HTTP} ${MDNS_PIDS_HTTPS}"
-if [[ "$ADVERTISE_SERVICE" != "1" ]]; then
-  say "dns-sd advertisement: disabled (ADVERTISE_SERVICE=$ADVERTISE_SERVICE)"
+if [[ "$SHARE_SERVICE" != "1" ]]; then
+  say "dns-sd sharing: disabled (SHARE_SERVICE=$SHARE_SERVICE)"
 elif [[ -n "$MDNS_PIDS" ]]; then
-  say "dns-sd advertisement: running (PID(s): $MDNS_PIDS)"
+  say "dns-sd sharing: running (PID(s): $MDNS_PIDS)"
 else
-  say "dns-sd advertisement: not running"
+  say "dns-sd sharing: not running"
 fi
 
 header "Network"

@@ -109,7 +109,7 @@ test('installer creates expected files with secure defaults and is rerunnable', 
   assert.match(plist, /<string>127\.0\.0\.1<\/string>/);
   assert.match(plist, /<key>ENABLE_TLS<\/key>/);
   assert.match(plist, /<string>1<\/string>/);
-  assert.match(plist, /<key>ADVERTISE_SERVICE<\/key>/);
+  assert.match(plist, /<key>SHARE_SERVICE<\/key>/);
   assert.match(plist, /<string>0<\/string>/);
 
   const generatedStart = fs.readFileSync(path.join(devlabDir, 'start-devlab.sh'), 'utf8');

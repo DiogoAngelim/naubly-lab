@@ -17,7 +17,7 @@ HOTSPOT_ERR="$LOG_DIR/hotspot.err.log"
 PORT="${PORT:-3000}"
 SERVICE_NAME="${SERVICE_NAME:-Diogo Dev Lab}"
 ENABLE_HOTSPOT="${ENABLE_HOTSPOT:-0}"
-ADVERTISE_SERVICE="${ADVERTISE_SERVICE:-0}"
+SHARE_SERVICE="${SHARE_SERVICE:-0}"
 BIND_ADDR="${BIND_ADDR:-127.0.0.1}"
 ENABLE_TLS="${ENABLE_TLS:-1}"
 
@@ -92,19 +92,19 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
 fi
 
 MDNS_PID=""
-if [[ "$ADVERTISE_SERVICE" == "1" ]]; then
+if [[ "$SHARE_SERVICE" == "1" ]]; then
   if [[ ! -x "$DNS_SD_BIN" ]]; then
-    echo "ADVERTISE_SERVICE=1 but missing dns-sd binary at $DNS_SD_BIN"
+    echo "SHARE_SERVICE=1 but missing dns-sd binary at $DNS_SD_BIN"
   else
-    AD_TYPE="_http._tcp"
-    [[ "$ENABLE_TLS" == "1" ]] && AD_TYPE="_https._tcp"
-    echo "Advertising service via Bonjour: $SERVICE_NAME $AD_TYPE local $PORT"
-    "$DNS_SD_BIN" -R "$SERVICE_NAME" "$AD_TYPE" local "$PORT" path=/ >>"$MDNS_OUT" 2>>"$MDNS_ERR" &
+    SERVICE_TYPE="_http._tcp"
+    [[ "$ENABLE_TLS" == "1" ]] && SERVICE_TYPE="_https._tcp"
+    echo "Sharing service via Bonjour: $SERVICE_NAME $SERVICE_TYPE local $PORT"
+    "$DNS_SD_BIN" -R "$SERVICE_NAME" "$SERVICE_TYPE" local "$PORT" path=/ >>"$MDNS_OUT" 2>>"$MDNS_ERR" &
     MDNS_PID=$!
     echo "$MDNS_PID" > "$MDNS_PID_FILE"
   fi
 else
-  echo "Bonjour advertisement disabled (ADVERTISE_SERVICE=$ADVERTISE_SERVICE)"
+  echo "Bonjour sharing disabled (SHARE_SERVICE=$SHARE_SERVICE)"
 fi
 
 if [[ "$ENABLE_HOTSPOT" == "1" ]]; then
@@ -121,7 +121,7 @@ else
 fi
 
 echo "Devlab started. Server PID=$SERVER_PID${MDNS_PID:+, mDNS PID=$MDNS_PID}"
-echo "Tip: if advertisement is enabled, discover with: dns-sd -B _http._tcp local or dns-sd -B _https._tcp local"
+echo "Tip: if sharing is enabled, discover with: dns-sd -B _http._tcp local or dns-sd -B _https._tcp local"
 
 terminate() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Received termination signal, cleaning up..."

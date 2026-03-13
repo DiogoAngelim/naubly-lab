@@ -151,7 +151,7 @@ Good for long-running local jobs where you want a quick heartbeat.
 ### 5) Share status API on your LAN for temporary team demos
 
 1. Set `BIND_ADDR=0.0.0.0` in `~/Library/LaunchAgents/com.diogo.devlab.plist`
-2. Optionally set `ADVERTISE_SERVICE=1`
+2. Optionally set `SHARE_SERVICE=1`
 3. Reload launchd (see [Configuration](#configuration))
 
 Then teammates on the same trusted network can resolve/discover the service and call it with the token.
@@ -220,7 +220,7 @@ Done automatically by the installer:
 Still manual by design:
 
 - Enabling LAN mode (`BIND_ADDR=0.0.0.0`)
-- Enabling Bonjour visibility (`ADVERTISE_SERVICE=1`)
+- Enabling Bonjour visibility (`SHARE_SERVICE=1`)
 - Enabling hotspot automation (`ENABLE_HOTSPOT=1`)
 - Granting Accessibility permissions for hotspot UI scripting
 - Trusting the certificate manually if Keychain trust fails automatically
@@ -233,7 +233,7 @@ Still manual by design:
 
 1. **Terminates** any leftover devlab processes from a previous session (using PID files)
 2. **Starts** `devlab-server.js` on `127.0.0.1:3000` with TLS enabled by default
-3. **Optionally runs** the service on the local network via Bonjour (`ADVERTISE_SERVICE=1`)
+3. **Optionally runs** the service on the local network via Bonjour (`SHARE_SERVICE=1`)
 4. **Optionally runs** the AppleScript Internet Sharing helper (disabled by default)
 5. **Waits** on the Node process; if it exits, launchd restarts the whole job (`KeepAlive true`)
 
@@ -322,9 +322,9 @@ launchctl kickstart -k gui/$(id -u)/com.diogo.devlab
 
 ## Local network discovery (Bonjour)
 
-The service can be advertised as `_https._tcp` with a TXT record of `path=/` when `ADVERTISE_SERVICE=1`.
+The service can be shared as `_https._tcp` with a TXT record of `path=/` when `SHARE_SERVICE=1`.
 
-By default, advertisement is disabled to reduce local-network discoverability.
+By default, sharing is disabled to reduce local-network discoverability.
 
 **Browse for it from another machine on the same LAN:**
 ```bash
@@ -343,11 +343,51 @@ dns-sd -L "Diogo Dev Lab" _https._tcp local
 If you need other machines to reach the API:
 
 1. Set `BIND_ADDR` to `0.0.0.0`
-2. Set `ADVERTISE_SERVICE` to `1` (optional)
+2. Set `SHARE_SERVICE` to `1` (optional)
 3. Keep `ENABLE_TLS=1`
 4. Reload launchd (see Configuration section)
 
 Only do this on trusted networks.
+
+---
+
+## LAN discovery and remote access boundaries
+
+DevLab supports **same-network discovery** when you explicitly enable it, but it is **not designed as an internet-facing remote service** out of the box.
+
+### How people on the same network can discover it
+
+On the host Mac:
+
+1. Set `BIND_ADDR=0.0.0.0`
+2. Set `SHARE_SERVICE=1`
+3. Reload launchd (see [Configuration](#configuration))
+
+On another machine in the same LAN:
+
+```bash
+dns-sd -B _https._tcp local
+dns-sd -L "Diogo Dev Lab" _https._tcp local
+```
+
+Then call the API with the host IP and port:
+
+```bash
+curl -k -H "Authorization: Bearer <TOKEN>" https://<HOST_IP>:3000
+```
+
+### What this does **not** provide by default
+
+- No internet/global discovery (Bonjour is local-link/LAN scoped)
+- No automatic WAN exposure (router/NAT/firewall config is out of scope)
+- No public CA certificate flow (self-signed cert by default)
+- No multi-user auth model (single shared bearer token)
+- No built-in reverse proxy, tunnel, WAF, or zero-trust gateway
+
+### Practical interpretation
+
+- **Supported well:** local-machine and trusted-LAN diagnostics
+- **Not the intended default:** public internet endpoint without additional hardening layers
 
 ---
 
@@ -360,7 +400,7 @@ bash ~/devlab/status-devlab.sh
 This prints:
 - Whether the LaunchAgent plist exists
 - Whether the `launchd` job is loaded
-- Running PIDs for the Node server and `dns-sd` advertisement
+- Running PIDs for the Node server and `dns-sd` sharing process
 - All non-loopback IPv4 addresses
 - Result of a `curl` probe to `https://127.0.0.1:3000` (with token and `-k` when TLS is enabled)
 - Presence of each log file with their paths
@@ -379,7 +419,7 @@ Environment variables are set in the plist and passed to `start-devlab.sh`:
 | `ENABLE_HOTSPOT` | `0` | Set to `1` to run the Internet Sharing AppleScript helper |
 | `BIND_ADDR` | `127.0.0.1` | Bind address. Set to `0.0.0.0` only when LAN access is intentionally required |
 | `TOKEN_FILE` | `~/devlab/config/token` | Path to the auth token file read at server startup |
-| `ADVERTISE_SERVICE` | `0` | Set to `1` to share via Bonjour (`_https._tcp`) |
+| `SHARE_SERVICE` | `0` | Set to `1` to share via Bonjour (`_https._tcp`) |
 | `ENABLE_TLS` | `1` | TLS mode for the API server |
 | `TLS_KEY_FILE` | `~/devlab/config/server.key.pem` | TLS private key path |
 | `TLS_CERT_FILE` | `~/devlab/config/server.cert.pem` | TLS certificate path |
@@ -388,7 +428,7 @@ Environment variables are set in the plist and passed to `start-devlab.sh`:
 
 - `BIND_ADDR=127.0.0.1`
 - `ENABLE_TLS=1`
-- `ADVERTISE_SERVICE=0`
+- `SHARE_SERVICE=0`
 - `ENABLE_HOTSPOT=0`
 
 To change a value, edit `~/Library/LaunchAgents/com.diogo.devlab.plist`, then reload:
@@ -415,7 +455,7 @@ launchctl kickstart -k "$DOMAIN/com.diogo.devlab"
 | **Configurable bind address** | `BIND_ADDR=127.0.0.1` locks the server to loopback when on untrusted networks |
 | **Token file permissions** | Created with `chmod 600` — unreadable by other local users |
 | **HTTPS enabled by default** | Self-signed cert generated during install; status/test commands use `curl -k` |
-| **Advertisement off by default** | `ADVERTISE_SERVICE=0` reduces LAN discoverability unless explicitly enabled |
+| **Bonjour sharing off by default** | `SHARE_SERVICE=0` reduces LAN discoverability unless explicitly enabled |
 
 ### Threat model summary
 
@@ -489,7 +529,7 @@ This will:
 | `launchd job: not loaded` | Run `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.diogo.devlab.plist` |
 | `curl probe: failed` | Check `~/devlab/logs/server.err.log` and `~/devlab/logs/error.log` |
 | `node server: not running` | Verify `command -v node` works; check `~/devlab/logs/server.err.log` |
-| `dns-sd advertisement: not running` | Check `~/devlab/logs/mdns.err.log`; confirm `/usr/bin/dns-sd` exists |
+| `dns-sd sharing: not running` | Check `~/devlab/logs/mdns.err.log`; confirm `/usr/bin/dns-sd` exists |
 | TLS handshake/cert warning | Expected with self-signed cert. Use `curl -k` or trust cert in Keychain |
 | `FATAL: could not load token` | Ensure `~/devlab/config/token` exists and is readable by your user |
 | `TLS is enabled but key/cert missing` | Re-run installer or create cert/key in `~/devlab/config` |

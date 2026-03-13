@@ -25,7 +25,7 @@
     <string>127.0.0.1</string>
     <key>TOKEN_FILE</key>
     <string>/Users/diogoangelim/devlab/config/token</string>
-    <key>ADVERTISE_SERVICE</key>
+    <key>SHARE_SERVICE</key>
     <string>0</string>
     <key>ENABLE_TLS</key>
     <string>1</string>
