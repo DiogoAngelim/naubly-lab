@@ -376,6 +376,14 @@ Then call the API with the host IP and port:
 curl -k -H "Authorization: Bearer <TOKEN>" https://<HOST_IP>:3000
 ```
 
+### Why discovery is useful
+
+- Reduces setup friction: teammates can find the service by name without manually sharing host IPs.
+- Speeds up demos and troubleshooting: people can quickly confirm the service is visible on the LAN.
+- Handles changing IPs better: Bonjour naming survives DHCP address changes better than pinned IP notes.
+- Improves cross-device UX: laptops and mobile Bonjour browsers can list the service automatically.
+- Keeps security controls intact: discovery does not bypass token auth or TLS behavior.
+
 ### What this does **not** provide by default
 
 - No internet/global discovery (Bonjour is local-link/LAN scoped)
